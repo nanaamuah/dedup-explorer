@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Interactive model of why 10B job-posting observations resolve to about 1B unique jobs.">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>The 10B-to-1B Gap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a working note. Argument at the top, the instrument (controls | readout + bridge) in the middle, reasoning and checks below in one reading column. */
+:root {
+  --paper: #f3f5f8;
+  --surface: #fbfcfd;
+  --ink: #17202b;
+  --ink-2: #465163;
+  --ink-3: #5f6a7a;
+  --rule: #dce1e8;
+  --rule-strong: #c4cbd5;
+  --accent: #eda100;        /* canary: marks and highlight only, never text */
+  --accent-ink: #855a00;    /* text-safe ochre */
+  --highlight: rgba(237, 161, 0, 0.28);
+  --jobs: #2a78d6;
+  --obs: #eda100;
+  --delta: #a3abb8;
+  --code-bg: #eef1f5;
+  --font-display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step--1: 0.8125rem;
+  --step-0: 1rem;
+  --step-1: 1.1875rem;
+  --step-2: 1.5rem;
+  --step-4: clamp(2rem, 1.2rem + 3.6vw, 3.5rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0f1318; --surface: #151a21; --ink: #e6eaf0; --ink-2: #b3bbc7; --ink-3: #8f99a7;
+    --rule: #27303a; --rule-strong: #374150; --accent: #e8b100; --accent-ink: #f0c454;
+    --highlight: rgba(232, 177, 0, 0.26); --jobs: #3987e5; --obs: #c98500; --delta: #5d6776;
+    --code-bg: #1b222b; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0f1318; --surface: #151a21; --ink: #e6eaf0; --ink-2: #b3bbc7; --ink-3: #8f99a7;
+  --rule: #27303a; --rule-strong: #374150; --accent: #e8b100; --accent-ink: #f0c454;
+  --highlight: rgba(232, 177, 0, 0.26); --jobs: #3987e5; --obs: #c98500; --delta: #5d6776;
+  --code-bg: #1b222b; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.6;
+}
+.wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 40px 56px;
+  display: grid;
+  gap: 48px;
+}
+a { color: var(--ink); text-decoration-color: var(--accent); text-underline-offset: 3px; text-decoration-thickness: 2px; }
+a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--jobs); outline-offset: 2px; }
+
+/* Header */
+.head { display: grid; gap: 18px; max-width: 900px; }
+.eyebrow {
+  font-family: var(--font-data); font-size: var(--step--1); letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-3); margin: 0;
+}
+h1 {
+  font-family: var(--font-display); font-variation-settings: "wdth" 116; font-weight: 780;
+  font-size: var(--step-4); line-height: 1.04; letter-spacing: -0.015em; margin: 0; text-wrap: balance;
+}
+h1 .mark { background: linear-gradient(transparent 58%, var(--highlight) 58%, var(--highlight) 92%, transparent 92%); padding: 0 0.06em; }
+h1 .soft { color: var(--ink-3); font-weight: 600; }
+.lead { font-size: var(--step-1); line-height: 1.55; color: var(--ink-2); max-width: 64ch; margin: 0; }
+.ledger {
+  font-family: var(--font-data); font-size: var(--step--1); color: var(--ink-2);
+  border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong);
+  padding-block: 10px; display: flex; flex-wrap: wrap; gap: 6px 22px; font-variant-numeric: tabular-nums;
+}
+.ledger b { color: var(--ink); font-weight: 500; }
+
+/* Instrument */
+.lab {
+  display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 28px;
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 24px;
+}
+@media (max-width: 880px) { .lab { grid-template-columns: minmax(0, 1fr); padding: 18px; } }
+.panel-title {
+  font-family: var(--font-display); font-variation-settings: "wdth" 110; font-weight: 700;
+  font-size: var(--step-1); margin: 0 0 4px; letter-spacing: -0.005em;
+}
+.hint { font-size: var(--step--1); color: var(--ink-3); margin: 0; line-height: 1.5; }
+.controls { display: grid; gap: 18px; align-content: start; min-width: 0; }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; }
+.presets button {
+  font: 500 var(--step--1)/1.2 var(--font-body); color: var(--ink); background: transparent;
+  border: 1px solid var(--rule-strong); border-radius: 999px; padding: 7px 12px; cursor: pointer;
+}
+.presets button:hover { border-color: var(--ink-3); }
+.presets button[aria-pressed="true"] { background: var(--highlight); border-color: var(--accent); }
+.ctl { display: grid; gap: 4px; }
+.ctl-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.ctl label { font-size: 0.9rem; font-weight: 500; }
+.ctl output { font-family: var(--font-data); font-size: 0.875rem; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ctl input[type="range"] { width: 100%; accent-color: var(--jobs); margin: 2px 0 0; }
+.ctl .sub { font-size: 0.78rem; color: var(--ink-3); line-height: 1.4; }
+.group-label { font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); margin: 6px 0 -6px; }
+
+.readout { display: grid; gap: 22px; min-width: 0; align-content: start; }
+.figures { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 18px; align-items: end; }
+@media (max-width: 560px) { .figures { grid-template-columns: minmax(0, 1fr); } }
+.hero-label, .fig-label { font-size: var(--step--1); color: var(--ink-3); margin: 0; }
+.hero { font-family: var(--font-body); font-weight: 600; font-size: clamp(3rem, 2.4rem + 2.4vw, 4.25rem); line-height: 1; margin: 6px 0 0; letter-spacing: -0.02em; }
+.hero small { font-size: 0.42em; font-weight: 500; color: var(--ink-3); letter-spacing: 0; margin-left: 6px; }
+.fig-list { display: grid; gap: 10px; margin: 0; }
+.fig-list div { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--rule); padding-bottom: 6px; }
+.fig-list dt { font-size: var(--step--1); color: var(--ink-2); }
+.fig-list dd { margin: 0; font-family: var(--font-data); font-size: 0.875rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.chart-block { display: grid; gap: 8px; min-width: 0; }
+.chart-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 16px; }
+.chart-title { font-weight: 600; font-size: 0.95rem; margin: 0; }
+.legend { display: flex; gap: 14px; font-size: var(--step--1); color: var(--ink-2); flex-wrap: wrap; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.svg-host { position: relative; width: 100%; min-width: 0; }
+.svg-host svg { display: block; width: 100%; height: auto; overflow: visible; }
+.svg-host .t { fill: var(--ink-2); font-family: var(--font-body); font-size: 12px; }
+.svg-host .t-strong { fill: var(--ink); font-family: var(--font-data); font-size: 12px; font-weight: 500; }
+.svg-host .t-data { fill: var(--ink-2); font-family: var(--font-data); font-size: 11px; }
+.svg-host .grid { stroke: var(--rule); stroke-width: 1; }
+.svg-host .axis { stroke: var(--rule-strong); stroke-width: 1; }
+.tip {
+  position: absolute; pointer-events: none; background: var(--ink); color: var(--paper);
+  font-size: 0.8rem; line-height: 1.4; padding: 7px 9px; border-radius: 6px; max-width: 220px;
+  transform: translate(-50%, calc(-100% - 10px)); white-space: normal;
+}
+details.numbers summary { cursor: pointer; font-size: var(--step--1); color: var(--ink-2); }
+.table-scroll { overflow-x: auto; }
+table { border-collapse: collapse; font-size: 0.85rem; margin-top: 8px; min-width: 320px; }
+th, td { text-align: right; padding: 5px 10px; border-bottom: 1px solid var(--rule); font-variant-numeric: tabular-nums; }
+th:first-child, td:first-child { text-align: left; }
+th { font-weight: 600; color: var(--ink-2); }
+td { font-family: var(--font-data); }
+
+/* Reading column */
+.notes { display: grid; gap: 40px; max-width: 70ch; }
+.notes section { display: grid; gap: 12px; }
+h2 {
+  font-family: var(--font-display); font-variation-settings: "wdth" 112; font-weight: 740;
+  font-size: var(--step-2); line-height: 1.15; margin: 0; letter-spacing: -0.01em; text-wrap: balance;
+}
+h3 { font-size: var(--step-0); font-weight: 600; margin: 0; }
+p { margin: 0; }
+.reason { display: grid; gap: 22px; }
+.reason > div { display: grid; gap: 6px; padding-left: 16px; border-left: 2px solid var(--rule-strong); }
+.formula {
+  font-family: var(--font-data); font-size: 0.9rem; background: var(--code-bg); border-radius: 6px;
+  padding: 10px 12px; overflow-x: auto; white-space: nowrap; color: var(--ink);
+}
+ol.checks { margin: 0; padding-left: 1.3em; display: grid; gap: 10px; }
+ol.checks li::marker { font-family: var(--font-data); color: var(--ink-3); }
+.aside {
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 18px 20px; display: grid; gap: 10px;
+}
+.code-wrap { position: relative; }
+pre {
+  margin: 0; background: var(--code-bg); border-radius: 8px; padding: 14px 16px; overflow-x: auto;
+  font-family: var(--font-data); font-size: 0.82rem; line-height: 1.55; color: var(--ink);
+}
+.copy {
+  position: absolute; top: 8px; right: 8px; font: 500 0.75rem/1 var(--font-body); color: var(--ink-2);
+  background: var(--surface); border: 1px solid var(--rule-strong); border-radius: 6px; padding: 6px 9px; cursor: pointer;
+}
+footer { font-size: var(--step--1); color: var(--ink-3); border-top: 1px solid var(--rule); padding-top: 16px; display: flex; flex-wrap: wrap; gap: 6px 18px; }
+@media (prefers-reduced-motion: no-preference) {
+  .svg-host rect.bar { transition: width 160ms ease, x 160ms ease; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="head">
+    <p class="eyebrow">Working note for Canaria · Immanuel Nana Amuah · October 2026</p>
+    <h1>10B observations. <span class="soft">1.11B jobs expected.</span> <span class="mark">About 1B counted.</span></h1>
+    <p class="lead">If each job sits on about 3 sites and each site shows it about 3 times, 10 billion observations should hold 10B ÷ 9 ≈ 1.11 billion jobs. Canaria counts about 1 billion, so the average job is being seen about 10 times. The model below tests which explanations can close that gap.</p>
+    <div class="ledger" aria-label="The arithmetic">
+      <span><b>10,000,000,000</b> observations</span>
+      <span>÷ (3 sites × 3 sightings) = <b>1,111,111,111</b> jobs</span>
+      <span>counted ≈ <b>1,000,000,000</b></span>
+      <span>gap ≈ <b>111 million</b> (10%)</span>
+    </div>
+  </header>
+
+  <section class="lab" aria-label="Interactive model">
+    <div class="controls">
+      <div>
+        <h2 class="panel-title">Set the assumptions</h2>
+        <p class="hint">Each simulated job gets one hidden hard-to-fill score. A higher score can push it onto more sites and keep it listed longer. The averages stay where you set them; only how they combine changes.</p>
+      </div>
+      <div class="presets" role="group" aria-label="Scenarios">
+        <button type="button" id="p-indep" data-preset="indep">Independent averages</button>
+        <button type="button" id="p-corr" data-preset="corr">Hard jobs travel and linger</button>
+        <button type="button" id="p-round" data-preset="round">Rounding alone</button>
+        <button type="button" id="p-merge" data-preset="merge">Over-merging alone</button>
+      </div>
+
+      <p class="group-label">The averages</p>
+      <div class="ctl">
+        <div class="ctl-row"><label for="ms">Sites per job</label><output id="ms-out" for="ms"></output></div>
+        <input type="range" id="ms" min="2.5" max="3.5" step="0.05" value="3">
+      </div>
+      <div class="ctl">
+        <div class="ctl-row"><label for="mv">Sightings per site</label><output id="mv-out" for="mv"></output></div>
+        <input type="range" id="mv" min="2.5" max="3.5" step="0.05" value="3">
+      </div>
+
+      <p class="group-label">How jobs differ</p>
+      <div class="ctl">
+        <div class="ctl-row"><label for="rho">Sites and sightings move together</label><output id="rho-out" for="rho"></output></div>
+        <input type="range" id="rho" min="0" max="0.9" step="0.01" value="0.35">
+        <span class="sub">Correlation between the two hidden scores. 0 means a job on many sites is no more likely to be relisted.</span>
+      </div>
+      <div class="ctl">
+        <div class="ctl-row"><label for="sigma">How uneven jobs are</label><output id="sigma-out" for="sigma"></output></div>
+        <input type="range" id="sigma" min="0.2" max="1.2" step="0.05" value="0.8">
+        <span class="sub">Spread of the hard-to-fill score. Higher values give a longer tail of jobs seen hundreds of times.</span>
+      </div>
+
+      <p class="group-label">Pipeline effects</p>
+      <div class="ctl">
+        <div class="ctl-row"><label for="merge">Distinct jobs merged by mistake</label><output id="merge-out" for="merge"></output></div>
+        <input type="range" id="merge" min="0" max="15" step="0.5" value="0">
+      </div>
+      <div class="ctl">
+        <div class="ctl-row"><label for="junk">Observations that are not jobs</label><output id="junk-out" for="junk"></output></div>
+        <input type="range" id="junk" min="0" max="15" step="0.5" value="0">
+      </div>
+    </div>
+
+    <div class="readout">
+      <div class="figures">
+        <div>
+          <p class="hero-label">Unique jobs counted from 10B observations</p>
+          <p class="hero" id="hero">1.00B<small>jobs</small></p>
+        </div>
+        <dl class="fig-list">
+          <div><dt>10B ÷ (sites × sightings)</dt><dd id="f-naive"></dd></div>
+          <div><dt>Observations per job</dt><dd id="f-per"></dd></div>
+          <div><dt>Share from the top 10% of jobs</dt><dd id="f-top"></dd></div>
+        </dl>
+      </div>
+
+      <div class="chart-block">
+        <div class="chart-head">
+          <p class="chart-title">From the simple estimate to the count</p>
+          <div class="legend" aria-hidden="true">
+            <span><i style="background: var(--jobs)"></i>Unique jobs</span>
+            <span><i style="background: var(--delta)"></i>Change</span>
+          </div>
+        </div>
+        <div class="svg-host" id="bridge" role="img" aria-label="Bridge from the simple estimate to the counted unique jobs"></div>
+      </div>
+
+      <div class="chart-block">
+        <div class="chart-head">
+          <p class="chart-title">Where the observations come from (60,000 simulated jobs)</p>
+          <div class="legend" aria-hidden="true">
+            <span><i style="background: var(--jobs)"></i>Share of jobs</span>
+            <span><i style="background: var(--obs)"></i>Share of observations</span>
+          </div>
+        </div>
+        <div class="svg-host" id="hist" role="img" aria-label="Share of jobs and share of observations by observations per job"></div>
+        <details class="numbers">
+          <summary>Show the numbers</summary>
+          <div class="table-scroll"><table id="hist-table"></table></div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <div class="notes">
+    <section>
+      <h2>What can close the gap</h2>
+      <div class="reason">
+        <div>
+          <h3>Averages multiply only when they are independent</h3>
+          <p>The simple estimate assumes the number of sites and the number of sightings are unrelated. Jobs that are hard to fill likely stay up longer and get pushed to more boards, so the two counts rise together.</p>
+          <p class="formula">mean(sites × sightings) = mean(sites) × mean(sightings) + cov(sites, sightings)</p>
+          <p>A covariance of about 1 adds one observation per job, which is enough to turn 1.11B into 1.00B. In this model a correlation of 0.35 does it, and the top 10% of jobs then produce about 43% of all observations.</p>
+        </div>
+        <div>
+          <h3>"About 3" is a wide number</h3>
+          <p>3.2 sites × 3.1 sightings is 9.92 observations per job, which gives 1.01B. Both published totals also carry a "+", so a 10% gap sits inside the rounding of the inputs.</p>
+        </div>
+        <div>
+          <h3>Deduplication can merge too much</h3>
+          <p>If distinct openings get joined (twenty warehouse associate posts from one employer in one city, say), the unique count falls. Wrong merges on 10% of jobs would close the gap alone. Of the three, this one would hurt a customer, so I would check it first. The methodology keeps postings whose location cannot be tested as unique, which pushes the other way, so I expect this effect to be small.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>What I would check in the real data</h2>
+      <ol class="checks">
+        <li>Compute mean(sites × sightings) and mean(sites) × mean(sightings) over resolved jobs. The difference is the covariance; if it is near 1, the first explanation carries the gap.</li>
+        <li>Draw 200 duplicate groups, stratified by group size, and check them by hand for false merges. Large groups come first, because one bad merge there removes many jobs.</li>
+        <li>Plot observations per job on a log scale and split the tail by employer. Always-hiring postings from large employers and staffing firms would show up as a long right tail.</li>
+      </ol>
+    </section>
+
+    <section class="aside">
+      <h2>One more thing I noticed</h2>
+      <p>The <a href="https://decanaria.com/methodology">methodology page</a> says the 1B+ figure is unique by URL and source job key, and that grouping the same job across boards happens in a second stage. If that is the 1B in the question, the same job on three sites is still three of those postings.</p>
+      <p>The fair comparison is then 10B ÷ 3 ≈ 3.3B postings expected against 1B counted, so each URL would be seen about 10 times, and the number of cross-board unique jobs would sit below 1B. One line saying which of the two counts the 1B refers to would settle it for a buyer.</p>
+    </section>
+
+    <section>
+      <h2>Model notes</h2>
+      <p>Sites = 1 + Poisson((s − 1) · e<sup>σz − σ²/2</sup>) and sightings = 1 + Poisson((v − 1) · e<sup>σz′ − σ²/2</sup>), where s and v are the averages you set and z′ is correlated with z at r. Observations per job is sites × sightings, and its expected value has a closed form:</p>
+      <p class="formula">E[obs per job] = s + v − 1 + (s − 1)(v − 1) · e<sup>σ²r</sup></p>
+      <p>The headline numbers and the bridge use that formula. The distribution chart and the top-10% share come from 60,000 simulated jobs with a fixed seed. I checked the formula against 2 million simulated jobs at the default settings: 10.004 observations per job from the formula and 10.009 from the simulation.</p>
+      <p>Reproduce it in R:</p>
+      <div class="code-wrap">
+        <button type="button" class="copy" id="copy-r">Copy</button>
+<pre id="r-code">set.seed(1)
+n     &lt;- 1e6
+sigma &lt;- 0.8   # how uneven jobs are
+rho   &lt;- 0.35  # sites and sightings move together
+
+z     &lt;- rnorm(n)
+zv    &lt;- rho * z + sqrt(1 - rho^2) * rnorm(n)
+sites &lt;- 1 + rpois(n, 2 * exp(sigma * z  - sigma^2 / 2))
+views &lt;- 1 + rpois(n, 2 * exp(sigma * zv - sigma^2 / 2))
+obs   &lt;- sites * views
+
+c(sites = mean(sites), views = mean(views),
+  obs = mean(obs), cov = cov(sites, views))
+10e9 / mean(obs)   # unique jobs implied by 10B observations</pre>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    <span>Built by Immanuel Nana Amuah for the Builder &amp; Problem Solver application.</span>
+    <span><a href="https://github.com/nanaamuah">github.com/nanaamuah</a></span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  var N = 60000;
+  var BINS = [
+    { label: "1", lo: 1, hi: 1 }, { label: "2", lo: 2, hi: 2 }, { label: "3–4", lo: 3, hi: 4 },
+    { label: "5–8", lo: 5, hi: 8 }, { label: "9–16", lo: 9, hi: 16 }, { label: "17–32", lo: 17, hi: 32 },
+    { label: "33–64", lo: 33, hi: 64 }, { label: "65+", lo: 65, hi: Infinity }
+  ];
+  var PRESETS = {
+    indep: { ms: 3, mv: 3, rho: 0, sigma: 0.8, merge: 0, junk: 0 },
+    corr:  { ms: 3, mv: 3, rho: 0.35, sigma: 0.8, merge: 0, junk: 0 },
+    round: { ms: 3.2, mv: 3.1, rho: 0, sigma: 0.8, merge: 0, junk: 0 },
+    merge: { ms: 3, mv: 3, rho: 0, sigma: 0.8, merge: 10, junk: 0 }
+  };
+  var ids = ["ms", "mv", "rho", "sigma", "merge", "junk"];
+  var el = {};
+  ids.forEach(function (k) { el[k] = document.getElementById(k); el[k + "Out"] = document.getElementById(k + "-out"); });
+
+  // Common random numbers so the chart moves smoothly as sliders change.
+  function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  var rand = mulberry32(20261027);
+  function normal() { var u = 0, v = 0; while (u === 0) u = rand(); v = rand(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+  var Z = new Float64Array(N), E = new Float64Array(N), U1 = new Float64Array(N), U2 = new Float64Array(N), G1 = new Float64Array(N), G2 = new Float64Array(N);
+  for (var i = 0; i < N; i++) { Z[i] = normal(); E[i] = normal(); U1[i] = rand(); U2[i] = rand(); G1[i] = normal(); G2[i] = normal(); }
+  function pois(lam, u, g) {
+    if (lam > 40) return Math.max(0, Math.round(lam + Math.sqrt(lam) * g));
+    var k = 0, p = Math.exp(-lam), c = p;
+    while (u > c && k < 400) { k++; p *= lam / k; c += p; }
+    return k;
+  }
+
+  function state() {
+    return { ms: +el.ms.value, mv: +el.mv.value, rho: +el.rho.value, sigma: +el.sigma.value, merge: +el.merge.value / 100, junk: +el.junk.value / 100 };
+  }
+  function fmtB(x) { return x.toFixed(2) + "B"; }
+  function fmtD(x) { var r = Math.round(x * 100) / 100; if (r === 0) return "0.00B"; return (r < 0 ? "−" : "+") + Math.abs(r).toFixed(2) + "B"; }
+  function pct(x, d) { return (x * 100).toFixed(d == null ? 0 : d) + "%"; }
+
+  function simulate(s) {
+    var c = Math.sqrt(1 - s.rho * s.rho), h = s.sigma * s.sigma / 2;
+    var obs = new Float64Array(N), tot = 0;
+    var jobsBin = new Array(BINS.length).fill(0), obsBin = new Array(BINS.length).fill(0);
+    for (var i = 0; i < N; i++) {
+      var zv = s.rho * Z[i] + c * E[i];
+      var S = 1 + pois((s.ms - 1) * Math.exp(s.sigma * Z[i] - h), U1[i], G1[i]);
+      var V = 1 + pois((s.mv - 1) * Math.exp(s.sigma * zv - h), U2[i], G2[i]);
+      var o = S * V; obs[i] = o; tot += o;
+      for (var b = 0; b < BINS.length; b++) { if (o <= BINS[b].hi) { jobsBin[b]++; obsBin[b] += o; break; } }
+    }
+    var sorted = Array.prototype.slice.call(obs).sort(function (a, b) { return b - a; });
+    var top = 0; for (var j = 0; j < N / 10; j++) top += sorted[j];
+    return { jobs: jobsBin.map(function (x) { return x / N; }), obs: obsBin.map(function (x) { return x / tot; }), top10: top / tot };
+  }
+
+  function svgEl(tag, attrs, text) {
+    var n = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (var k in attrs) n.setAttribute(k, attrs[k]);
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  // Rect with 4px rounded data-end only (square at the baseline).
+  function endRoundedRect(x, y, w, h, dir, r) {
+    r = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2);
+    if (w <= 0 || h <= 0) return "";
+    if (dir === "right") return "M" + x + "," + y + "h" + (w - r) + "q" + r + ",0 " + r + "," + r + "v" + (h - 2 * r) + "q0," + r + " -" + r + "," + r + "h-" + (w - r) + "z";
+    return "M" + x + "," + (y + h) + "v-" + (h - r) + "q0,-" + r + " " + r + ",-" + r + "h" + (w - 2 * r) + "q" + r + ",0 " + r + "," + r + "v" + (h - r) + "z";
+  }
+
+  function drawBridge(s, eobs) {
+    var host = document.getElementById("bridge");
+    var W = Math.max(300, host.clientWidth || 600);
+    var start = 10 / (s.ms * s.mv), afterCorr = 10 / eobs, afterJunk = afterCorr * (1 - s.junk), fin = afterJunk * (1 - s.merge);
+    var rows = [
+      { label: "10B ÷ (sites × sightings)", kind: "total", from: 0, to: start, value: fmtB(start) },
+      { label: "Sites and sightings move together", kind: "delta", from: afterCorr, to: start, value: fmtD(afterCorr - start), up: afterCorr > start },
+      { label: "Observations that are not jobs", kind: "delta", from: afterJunk, to: afterCorr, value: fmtD(afterJunk - afterCorr) },
+      { label: "Distinct jobs merged by mistake", kind: "delta", from: fin, to: afterJunk, value: fmtD(fin - afterJunk) },
+      { label: "Counted unique jobs", kind: "total", from: 0, to: fin, value: fmtB(fin) }
+    ];
+    var padL = 4, padR = 64, rowH = 44, top = 6, axisH = 22;
+    var H = top + rows.length * rowH + axisH;
+    var maxV = Math.max(1.25, Math.ceil(Math.max(start, fin) * 4 + 0.2) / 4);
+    var x = function (v) { return padL + (v / maxV) * (W - padL - padR); };
+    var svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, preserveAspectRatio: "xMinYMin meet" });
+    for (var t = 0; t <= maxV + 1e-9; t += 0.25) {
+      svg.appendChild(svgEl("line", { x1: x(t), x2: x(t), y1: top, y2: H - axisH, class: "grid" }));
+      var lbl = t === 0 ? "0" : (t % 1 === 0 ? t.toFixed(0) : t.toFixed(2)) + "B";
+      svg.appendChild(svgEl("text", { x: x(t), y: H - 6, "text-anchor": t === 0 ? "start" : "middle", class: "t-data" }, lbl));
+    }
+    rows.forEach(function (r, i) {
+      var y = top + i * rowH;
+      svg.appendChild(svgEl("text", { x: padL, y: y + 13, class: "t" }, r.label));
+      var a = Math.min(r.from, r.to), b = Math.max(r.from, r.to);
+      var bx = x(a), bw = Math.max(0, x(b) - x(a)), by = y + 20, bh = 14;
+      if (r.kind === "total") {
+        svg.appendChild(svgEl("path", { d: endRoundedRect(bx, by, bw, bh, "right", 4), fill: "var(--jobs)", class: "bar" }));
+      } else if (bw >= 1) {
+        svg.appendChild(svgEl("rect", { x: bx, y: by, width: bw, height: bh, rx: 2, fill: "var(--delta)", class: "bar" }));
+      } else {
+        svg.appendChild(svgEl("line", { x1: x(r.to), x2: x(r.to), y1: by, y2: by + bh, stroke: "var(--delta)", "stroke-width": 2 }));
+      }
+      svg.appendChild(svgEl("text", { x: x(b) + 6, y: by + 11, class: r.kind === "total" ? "t-strong" : "t-data" }, r.value));
+    });
+    host.innerHTML = "";
+    host.appendChild(svg);
+  }
+
+  var tip = document.createElement("div");
+  tip.className = "tip"; tip.hidden = true; tip.setAttribute("role", "status");
+  function drawHist(sim) {
+    var host = document.getElementById("hist");
+    var W = Math.max(300, host.clientWidth || 600), H = 230;
+    var padL = 34, padR = 6, padT = 10, padB = 42;
+    var maxShare = Math.max.apply(null, sim.jobs.concat(sim.obs));
+    var yMax = Math.max(0.1, Math.ceil(maxShare * 10) / 10);
+    var plotW = W - padL - padR, plotH = H - padT - padB;
+    var band = plotW / BINS.length;
+    var colW = Math.min(20, (band - 10) / 2);
+    var y = function (v) { return padT + plotH - (v / yMax) * plotH; };
+    var svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H });
+    for (var t = 0; t <= yMax + 1e-9; t += 0.1) {
+      svg.appendChild(svgEl("line", { x1: padL, x2: W - padR, y1: y(t), y2: y(t), class: t === 0 ? "axis" : "grid" }));
+      svg.appendChild(svgEl("text", { x: padL - 6, y: y(t) + 4, "text-anchor": "end", class: "t-data" }, Math.round(t * 100) + "%"));
+    }
+    BINS.forEach(function (b, i) {
+      var cx = padL + band * i + band / 2;
+      var hj = y(0) - y(sim.jobs[i]), ho = y(0) - y(sim.obs[i]);
+      svg.appendChild(svgEl("path", { d: endRoundedRect(cx - colW - 1, y(sim.jobs[i]), colW, hj, "up", 4), fill: "var(--jobs)" }));
+      svg.appendChild(svgEl("path", { d: endRoundedRect(cx + 1, y(sim.obs[i]), colW, ho, "up", 4), fill: "var(--obs)" }));
+      svg.appendChild(svgEl("text", { x: cx, y: H - padB + 16, "text-anchor": "middle", class: "t-data" }, b.label));
+      var hit = svgEl("rect", { x: padL + band * i, y: padT, width: band, height: plotH, fill: "transparent", tabindex: "0" });
+      var msg = b.label + " observations per job: " + pct(sim.jobs[i], 1) + " of jobs, " + pct(sim.obs[i], 1) + " of observations";
+      hit.setAttribute("aria-label", msg);
+      function show() { tip.textContent = msg; tip.hidden = false; tip.style.left = Math.min(Math.max(cx / W * host.clientWidth, 110), host.clientWidth - 110) + "px"; tip.style.top = (Math.min(y(sim.jobs[i]), y(sim.obs[i])) / H * host.clientHeight) + "px"; }
+      hit.addEventListener("pointerenter", show); hit.addEventListener("focus", show);
+      hit.addEventListener("pointerleave", function () { tip.hidden = true; }); hit.addEventListener("blur", function () { tip.hidden = true; });
+      svg.appendChild(hit);
+    });
+    svg.appendChild(svgEl("text", { x: padL + plotW / 2, y: H - 6, "text-anchor": "middle", class: "t" }, "Observations per job"));
+    host.innerHTML = "";
+    host.appendChild(svg);
+    host.appendChild(tip);
+
+    var rowsHtml = "<thead><tr><th>Observations per job</th><th>Share of jobs</th><th>Share of observations</th></tr></thead><tbody>";
+    BINS.forEach(function (b, i) { rowsHtml += "<tr><td>" + b.label + "</td><td>" + pct(sim.jobs[i], 1) + "</td><td>" + pct(sim.obs[i], 1) + "</td></tr>"; });
+    document.getElementById("hist-table").innerHTML = rowsHtml + "</tbody>";
+  }
+
+  function syncPresets(s) {
+    Object.keys(PRESETS).forEach(function (k) {
+      var p = PRESETS[k];
+      var on = Math.abs(p.ms - s.ms) < 1e-9 && Math.abs(p.mv - s.mv) < 1e-9 && Math.abs(p.rho - s.rho) < 1e-9 &&
+        Math.abs(p.sigma - s.sigma) < 1e-9 && Math.abs(p.merge / 100 - s.merge) < 1e-9 && Math.abs(p.junk / 100 - s.junk) < 1e-9;
+      document.getElementById("p-" + k).setAttribute("aria-pressed", on ? "true" : "false");
+    });
+  }
+
+  var lastSim = null, simKey = "";
+  function render() {
+    var s = state();
+    el.msOut.textContent = s.ms.toFixed(2);
+    el.mvOut.textContent = s.mv.toFixed(2);
+    el.rhoOut.textContent = "r = " + s.rho.toFixed(2);
+    el.sigmaOut.textContent = "σ = " + s.sigma.toFixed(2);
+    el.mergeOut.textContent = pct(s.merge, 1);
+    el.junkOut.textContent = pct(s.junk, 1);
+
+    var eobs = s.ms + s.mv - 1 + (s.ms - 1) * (s.mv - 1) * Math.exp(s.sigma * s.sigma * s.rho);
+    var fin = 10 * (1 - s.junk) * (1 - s.merge) / eobs;
+    document.getElementById("hero").innerHTML = fmtB(fin) + "<small>jobs</small>";
+    document.getElementById("f-naive").textContent = fmtB(10 / (s.ms * s.mv));
+    var prod = s.ms * s.mv;
+    document.getElementById("f-per").textContent = eobs.toFixed(2) + " = " + prod.toFixed(2) + " + " + (eobs - prod).toFixed(2) + " cov";
+
+    var key = [s.ms, s.mv, s.rho, s.sigma].join("|");
+    if (key !== simKey) { lastSim = simulate(s); simKey = key; }
+    document.getElementById("f-top").textContent = pct(lastSim.top10, 0);
+    drawBridge(s, eobs);
+    drawHist(lastSim);
+    syncPresets(s);
+  }
+
+  var queued = false;
+  function schedule() { if (queued) return; queued = true; requestAnimationFrame(function () { queued = false; render(); }); }
+  ids.forEach(function (k) { el[k].addEventListener("input", schedule); });
+  document.querySelectorAll("[data-preset]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var p = PRESETS[btn.getAttribute("data-preset")];
+      ids.forEach(function (k) { el[k].value = p[k]; });
+      render();
+    });
+  });
+  if (window.ResizeObserver) { new ResizeObserver(schedule).observe(document.getElementById("bridge")); }
+  else { window.addEventListener("resize", schedule); }
+
+  document.getElementById("copy-r").addEventListener("click", function () {
+    var btn = this, text = document.getElementById("r-code").textContent;
+    function done(label) { btn.textContent = label; setTimeout(function () { btn.textContent = "Copy"; }, 1600); }
+    function fallback() {
+      var r = document.createRange(); r.selectNodeContents(document.getElementById("r-code"));
+      var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); done("Selected");
+    }
+    try { navigator.clipboard.writeText(text).then(function () { done("Copied"); }, fallback); } catch (e) { fallback(); }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
