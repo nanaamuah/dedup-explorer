@@ -193,8 +193,8 @@ footer { font-size: var(--step--1); color: var(--ink-3); border-top: 1px solid v
 <div class="wrap">
   <header class="head">
     <p class="eyebrow">Working note for Canaria · Immanuel Nana Amuah · October 2026</p>
-    <h1>10B observations. <span class="soft">1.11B jobs expected.</span> <span class="mark">About 1B counted.</span></h1>
-    <p class="lead">If each job sits on about 3 sites and each site shows it about 3 times, 10 billion observations should hold 10B ÷ 9 ≈ 1.11 billion jobs. Canaria counts about 1 billion, so the average job is being seen about 10 times. The model below tests which explanations can close that gap.</p>
+    <h1>10B observations should give 1.11B jobs, <span class="soft">so why does Canaria count</span> <span class="mark">about 1B?</span></h1>
+    <p class="lead">If every job sits on about 3 sites and each site shows it about 3 times, then 10 billion observations should work out to roughly 10B ÷ 9, or 1.11 billion unique jobs. Canaria counts closer to 1 billion, which means the average job is actually being seen about 10 times, so I built this small model to see which explanations can account for that extra sighting.</p>
     <div class="ledger" aria-label="The arithmetic">
       <span><b>10,000,000,000</b> observations</span>
       <span>÷ (3 sites × 3 sightings) = <b>1,111,111,111</b> jobs</span>
@@ -207,7 +207,7 @@ footer { font-size: var(--step--1); color: var(--ink-3); border-top: 1px solid v
     <div class="controls">
       <div>
         <h2 class="panel-title">Set the assumptions</h2>
-        <p class="hint">Each simulated job gets one hidden hard-to-fill score. A higher score can push it onto more sites and keep it listed longer. The averages stay where you set them; only how they combine changes.</p>
+        <p class="hint">Every simulated job gets a hidden hard-to-fill score, and the higher that score, the more sites the job tends to land on and the longer it stays listed. The averages stay wherever you set them, so the only thing that changes is how they combine.</p>
       </div>
       <div class="presets" role="group" aria-label="Scenarios">
         <button type="button" id="p-indep" data-preset="indep">Independent averages</button>
@@ -230,12 +230,12 @@ footer { font-size: var(--step--1); color: var(--ink-3); border-top: 1px solid v
       <div class="ctl">
         <div class="ctl-row"><label for="rho">Sites and sightings move together</label><output id="rho-out" for="rho"></output></div>
         <input type="range" id="rho" min="0" max="0.9" step="0.01" value="0.35">
-        <span class="sub">Correlation between the two hidden scores. 0 means a job on many sites is no more likely to be relisted.</span>
+        <span class="sub">This is the correlation between the two hidden scores, so at 0 a job that sits on many sites is no more likely to be relisted than any other.</span>
       </div>
       <div class="ctl">
         <div class="ctl-row"><label for="sigma">How uneven jobs are</label><output id="sigma-out" for="sigma"></output></div>
         <input type="range" id="sigma" min="0.2" max="1.2" step="0.05" value="0.8">
-        <span class="sub">Spread of the hard-to-fill score. Higher values give a longer tail of jobs seen hundreds of times.</span>
+        <span class="sub">This sets how spread out the score is, and pushing it higher gives a longer tail of jobs that get seen hundreds of times.</span>
       </div>
 
       <p class="group-label">Pipeline effects</p>
@@ -295,18 +295,18 @@ footer { font-size: var(--step--1); color: var(--ink-3); border-top: 1px solid v
       <h2>What can close the gap</h2>
       <div class="reason">
         <div>
-          <h3>Averages multiply only when they are independent</h3>
-          <p>The simple estimate assumes the number of sites and the number of sightings are unrelated. Jobs that are hard to fill likely stay up longer and get pushed to more boards, so the two counts rise together.</p>
+          <h3>The averages only multiply cleanly when they are independent</h3>
+          <p>The simple estimate quietly assumes that the number of sites a job appears on has nothing to do with how many times each site shows it. That seems unlikely in practice, because a job that is hard to fill tends to stay up longer and also gets pushed to more boards, so the two counts probably rise together.</p>
           <p class="formula">mean(sites × sightings) = mean(sites) × mean(sightings) + cov(sites, sightings)</p>
-          <p>A covariance of about 1 adds one observation per job, which is enough to turn 1.11B into 1.00B. In this model a correlation of 0.35 does it, and the top 10% of jobs then produce about 43% of all observations.</p>
+          <p>That covariance only needs to be about 1 to add one extra observation per job, which is enough to bring 1.11B down to 1.00B. In this model a correlation of 0.35 gets there, and at that point the top 10% of jobs are producing about 43% of all observations.</p>
         </div>
         <div>
-          <h3>"About 3" is a wide number</h3>
-          <p>3.2 sites × 3.1 sightings is 9.92 observations per job, which gives 1.01B. Both published totals also carry a "+", so a 10% gap sits inside the rounding of the inputs.</p>
+          <h3>"About 3" covers a lot of ground</h3>
+          <p>It also helps to remember that "about 3" is a rounded figure, and small shifts matter here, since 3.2 sites and 3.1 sightings give 9.92 observations per job and that already lands at 1.01B. Both published totals also carry a "+", so a 10% gap could sit entirely inside that rounding.</p>
         </div>
         <div>
           <h3>Deduplication can merge too much</h3>
-          <p>If distinct openings get joined (twenty warehouse associate posts from one employer in one city, say), the unique count falls. Wrong merges on 10% of jobs would close the gap alone. Of the three, this one would hurt a customer, so I would check it first. The methodology keeps postings whose location cannot be tested as unique, which pushes the other way, so I expect this effect to be small.</p>
+          <p>The last possibility is that some distinct openings are being joined together, for example twenty warehouse associate posts from the same employer in the same city, which would pull the unique count down, and wrong merges on just 10% of jobs would close the gap on their own. This is the one I would check first, because unlike the other two it would actually hurt a customer. However, the methodology already keeps postings it cannot test by location as unique, which pushes the other way, so I expect the effect to be small.</p>
         </div>
       </div>
     </section>
@@ -314,24 +314,24 @@ footer { font-size: var(--step--1); color: var(--ink-3); border-top: 1px solid v
     <section>
       <h2>What I would check in the real data</h2>
       <ol class="checks">
-        <li>Compute mean(sites × sightings) and mean(sites) × mean(sightings) over resolved jobs. The difference is the covariance; if it is near 1, the first explanation carries the gap.</li>
-        <li>Draw 200 duplicate groups, stratified by group size, and check them by hand for false merges. Large groups come first, because one bad merge there removes many jobs.</li>
-        <li>Plot observations per job on a log scale and split the tail by employer. Always-hiring postings from large employers and staffing firms would show up as a long right tail.</li>
+        <li>I would start by comparing mean(sites × sightings) with mean(sites) × mean(sightings) across resolved jobs, since the difference between the two is the covariance, and if it comes out near 1 the first explanation carries most of the gap.</li>
+        <li>Next, I would pull around 200 duplicate groups, stratified by size, and check them by hand for false merges, starting with the largest groups because a single bad merge there removes many jobs at once.</li>
+        <li>Finally, I would plot observations per job on a log scale and split the tail by employer, where always-hiring postings from large employers and staffing firms should stand out as a long right tail.</li>
       </ol>
     </section>
 
     <section class="aside">
       <h2>One more thing I noticed</h2>
-      <p>The <a href="https://decanaria.com/methodology">methodology page</a> says the 1B+ figure is unique by URL and source job key, and that grouping the same job across boards happens in a second stage. If that is the 1B in the question, the same job on three sites is still three of those postings.</p>
-      <p>The fair comparison is then 10B ÷ 3 ≈ 3.3B postings expected against 1B counted, so each URL would be seen about 10 times, and the number of cross-board unique jobs would sit below 1B. One line saying which of the two counts the 1B refers to would settle it for a buyer.</p>
+      <p>While reading the <a href="https://decanaria.com/methodology">methodology page</a>, I noticed that the 1B+ figure is described as unique by URL and source job key, with the grouping of the same job across boards happening in a second stage. If that is the 1B in the question, then the same job on three sites still counts as three postings, which changes the comparison quite a bit.</p>
+      <p>In that case the fair comparison would be 10B ÷ 3 ≈ 3.3B postings expected against 1B counted, so each URL would be seen about 10 times and the true cross-board count would sit below 1B. A single line on the page saying which of the two counts the 1B refers to would clear this up for buyers.</p>
     </section>
 
     <section>
       <h2>Model notes</h2>
-      <p>Sites = 1 + Poisson((s − 1) · e<sup>σz − σ²/2</sup>) and sightings = 1 + Poisson((v − 1) · e<sup>σz′ − σ²/2</sup>), where s and v are the averages you set and z′ is correlated with z at r. Observations per job is sites × sightings, and its expected value has a closed form:</p>
+      <p>Each job gets 1 + Poisson((s − 1) · e<sup>σz − σ²/2</sup>) sites and 1 + Poisson((v − 1) · e<sup>σz′ − σ²/2</sup>) sightings per site, where s and v are the averages you set and z′ is correlated with z at r. Observations per job is then simply sites × sightings, and its expected value has a closed form:</p>
       <p class="formula">E[obs per job] = s + v − 1 + (s − 1)(v − 1) · e<sup>σ²r</sup></p>
-      <p>The headline numbers and the bridge use that formula. The distribution chart and the top-10% share come from 60,000 simulated jobs with a fixed seed. I checked the formula against 2 million simulated jobs at the default settings: 10.004 observations per job from the formula and 10.009 from the simulation.</p>
-      <p>Reproduce it in R:</p>
+      <p>The headline number and the bridge chart come from that formula, while the distribution chart and the top-10% share come from 60,000 simulated jobs with a fixed seed. To make sure the formula holds, I checked it against 2 million simulated jobs at the default settings, and the two agree closely, with 10.004 observations per job from the formula against 10.009 from the simulation.</p>
+      <p>If you want to reproduce it in R, this is all it takes:</p>
       <div class="code-wrap">
         <button type="button" class="copy" id="copy-r">Copy</button>
 <pre id="r-code">set.seed(1)
