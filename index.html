@@ -330,12 +330,12 @@ footer { font-size: var(--step--1); color: var(--ink-3); border-top: 1px solid v
       <h2>Model notes</h2>
       <p>Each job gets 1 + Poisson((s − 1) · e<sup>σz − σ²/2</sup>) sites and 1 + Poisson((v − 1) · e<sup>σz′ − σ²/2</sup>) sightings per site, where s and v are the averages you set and z′ is correlated with z at r. Observations per job is then simply sites × sightings, and its expected value has a closed form:</p>
       <p class="formula">E[obs per job] = s + v − 1 + (s − 1)(v − 1) · e<sup>σ²r</sup></p>
-      <p>The headline number and the bridge chart come from that formula, while the distribution chart and the top-10% share come from 60,000 simulated jobs with a fixed seed. To make sure the formula holds, I checked it against 2 million simulated jobs at the default settings, and the two agree closely, with 10.004 observations per job from the formula against 10.009 from the simulation.</p>
+      <p>The headline number and the bridge chart come from that formula, while the distribution chart and the top-10% share come from 60,000 simulated jobs with a fixed seed. To make sure the formula holds, I checked it against 2 million simulated jobs at the default settings, and the two agree closely, with 10.004 observations per job from the formula against 10.0164 from the simulation.</p>
       <p>If you want to reproduce it in R, this is all it takes:</p>
       <div class="code-wrap">
         <button type="button" class="copy" id="copy-r">Copy</button>
 <pre id="r-code">set.seed(1)
-n     &lt;- 1e6
+n     &lt;- 2e6
 sigma &lt;- 0.8   # how uneven jobs are
 rho   &lt;- 0.35  # sites and sightings move together
 
